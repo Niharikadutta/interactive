@@ -90,9 +90,14 @@ new [] {1,2,3}");
 
             var proxyCommand = new SubmitCode($"#!connect test {pipeName}");
 
-            await kernel.SendAsync(proxyCommand);
+            var t2 = Task.Run(async () =>
+            {
+                await kernel.SendAsync(proxyCommand);
+                resetEvent.WaitOne(TimeSpan.FromSeconds(10));
 
-            resetEvent.WaitOne(TimeSpan.FromSeconds(10));
+            });
+
+            await Task.WhenAll(t, t2);
 
             var proxyCommand2 = new SubmitCode(@"
 var x = 1 + 1;
@@ -123,13 +128,19 @@ x", targetKernelName: "test");
                 resetEvent.Set();
             });
 
+
             using var events = kernel.KernelEvents.ToSubscribedList();
 
             var proxyCommand = new SubmitCode($"#!connect test {pipeName}");
 
-            await kernel.SendAsync(proxyCommand);
+            var t2 = Task.Run(async () =>
+            {
+                await kernel.SendAsync(proxyCommand);
+                resetEvent.WaitOne(TimeSpan.FromSeconds(10));
 
-            resetEvent.WaitOne(TimeSpan.FromSeconds(10));
+            });
+
+            await Task.WhenAll(t, t2);
 
             var proxyCommand2 = new SubmitCode(@"
 #!test
