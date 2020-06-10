@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Interactive.Commands;
@@ -77,15 +78,21 @@ new [] {1,2,3}");
 
             var pipeName = Guid.NewGuid().ToString();
             using var cSharpKernel = new CSharpKernel();
-            Action doWait = () =>
-                Task.Run(() => NamedPipeKernelServer.WaitForConnection(cSharpKernel, pipeName));
-            doWait();
+            using var resetEvent = new ManualResetEvent(false);
+            var t = Task.Run(() =>
+                {
+                    NamedPipeKernelServer.WaitForConnection(cSharpKernel, pipeName);
+                    resetEvent.Set();
+                });
+            
 
             using var events = kernel.KernelEvents.ToSubscribedList();
 
             var proxyCommand = new SubmitCode($"#!connect test {pipeName}");
 
             await kernel.SendAsync(proxyCommand);
+
+            resetEvent.WaitOne(TimeSpan.FromSeconds(10));
 
             var proxyCommand2 = new SubmitCode(@"
 var x = 1 + 1;
@@ -109,15 +116,20 @@ x", targetKernelName: "test");
 
             var pipeName = Guid.NewGuid().ToString();
             using var cSharpKernel = new CSharpKernel();
-            Action doWait = () =>
-                Task.Run(() => NamedPipeKernelServer.WaitForConnection(cSharpKernel, pipeName));
-            doWait();
+            using var resetEvent = new ManualResetEvent(false);
+            var t = Task.Run(() =>
+            {
+                NamedPipeKernelServer.WaitForConnection(cSharpKernel, pipeName);
+                resetEvent.Set();
+            });
 
             using var events = kernel.KernelEvents.ToSubscribedList();
 
             var proxyCommand = new SubmitCode($"#!connect test {pipeName}");
 
             await kernel.SendAsync(proxyCommand);
+
+            resetEvent.WaitOne(TimeSpan.FromSeconds(10));
 
             var proxyCommand2 = new SubmitCode(@"
 #!test
